@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quran Verse Finder</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      color: #222;
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 700px;
+      background: white;
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 28px;
+      text-align: center;
+    }
+
+    p.note {
+      text-align: center;
+      color: #555;
+      margin-top: -6px;
+      margin-bottom: 24px;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    input {
+      flex: 1;
+      padding: 14px 16px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #4a7cff;
+    }
+
+    button {
+      padding: 14px 18px;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      background: #4a7cff;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: 0.95;
+    }
+
+    .result {
+      margin-top: 20px;
+      padding: 20px;
+      background: #fafafa;
+      border: 1px solid #e8e8e8;
+      border-radius: 12px;
+      min-height: 120px;
+    }
+
+    .meta {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 14px;
+    }
+
+    .arabic {
+      font-size: 32px;
+      line-height: 1.9;
+      text-align: right;
+      direction: rtl;
+      margin-bottom: 18px;
+    }
+
+    .translation {
+      font-size: 18px;
+      line-height: 1.7;
+    }
+
+    .error {
+      color: #b00020;
+      font-weight: bold;
+    }
+
+    .loading {
+      color: #444;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>Quran Verse Finder</h1>
+    <p class="note">Type like: <strong>2/72</strong> or <strong>2:72</strong></p>
+
+    <div class="search-row">
+      <input id="referenceInput" type="text" placeholder="Enter surah/ayah e.g. 2/72" />
+      <button id="searchBtn">Search</button>
+    </div>
+
+    <div class="result" id="result">
+      Enter a reference and press Search.
+    </div>
+  </div>
+
+  <script>
+    const input = document.getElementById("referenceInput");
+    const button = document.getElementById("searchBtn");
+    const result = document.getElementById("result");
+
+    async function fetchAyah() {
+      const raw = input.value.trim();
+
+      if (!raw) {
+        result.innerHTML = '<div class="error">Please enter something like 2/72.</div>';
+        return;
+      }
+
+      const normalized = raw.replace("/", ":");
+      const match = normalized.match(/^(\d{1,3}):(\d{1,3})$/);
+
+      if (!match) {
+        result.innerHTML = '<div class="error">Invalid format. Use surah/ayah like 2/72.</div>';
+        return;
+      }
+
+      const surah = Number(match[1]);
+      const ayah = Number(match[2]);
+
+      if (surah < 1 || surah > 114) {
+        result.innerHTML = '<div class="error">Surah must be between 1 and 114.</div>';
+        return;
+      }
+
+      result.innerHTML = '<div class="loading">Loading verse...</div>';
+
+      try {
+        const arabicUrl = `https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/quran-uthmani`;
+        const englishUrl = `https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/en.asad`;
+
+        const [arabicRes, englishRes] = await Promise.all([
+          fetch(arabicUrl),
+          fetch(englishUrl)
+        ]);
+
+        const arabicData = await arabicRes.json();
+        const englishData = await englishRes.json();
+
+        if (arabicData.code !== 200 || englishData.code !== 200) {
+          throw new Error("Verse not found.");
+        }
+
+        const arabicText = arabicData.data.text;
+        const englishText = englishData.data.text;
+        const surahName = englishData.data.surah.englishName;
+        const surahNameArabic = arabicData.data.surah.name;
+
+        result.innerHTML = `
+          <div class="meta">
+            Surah ${surah} - ${surahName} (${surahNameArabic}) | Ayah ${ayah}
+          </div>
+          <div class="arabic">${arabicText}</div>
+          <div class="translation">${englishText}</div>
+        `;
+      } catch (error) {
+        result.innerHTML = '<div class="error">Could not load the verse. Please try again.</div>';
+      }
+    }
+
+    button.addEventListener("click", fetchAyah);
+
+    input.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") {
+        fetchAyah();
+      }
+    });
+
+    // Optional: preload an example
+    input.value = "2/72";
+  </script>
+</body>
+</html>
