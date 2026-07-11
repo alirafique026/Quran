@@ -160,7 +160,7 @@
 
       try {
         const arabicUrl = `https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/quran-uthmani`;
-        const englishUrl = `https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/en.asad`;
+        const englishUrl = `https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/en.sahih`;
 
         const [arabicRes, englishRes] = await Promise.all([
           fetch(arabicUrl),
